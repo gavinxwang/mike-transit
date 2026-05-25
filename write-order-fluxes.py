@@ -65,8 +65,6 @@ for arm in ['red', 'blue']:
             np.save(f'{target_short}_spectra_full/{string}_e{expnum}_o0{order}_flux.npy', spec)
             np.save(f'{target_short}_uncertainties_full/{string}_e{expnum}_o0{order}_unc.npy', unc)
 
-print(exitt)
-
 # blue arm wavelength solution
 import scipy.ndimage as ndi
 from numpy.polynomial import Chebyshev
