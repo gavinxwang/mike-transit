@@ -19,8 +19,11 @@ def natural_keys(text):
 folder = "run_carpy" # folder in which mike pipeline was run
 target = "WASP-107"
 target_short = "w107"
+planet = "wasp107b"
 
-os.mkdir(f'{target_short}_spectra_full')
+os.makedirs(f'{target_short}_spectra_full', exist_ok=True)
+os.makedirs(f'{target_short}_uncertainties_full', exist_ok=True)
+os.makedirs('Plots', exist_ok=True)
 
 for arm in ['red', 'blue']:
     print(f'{arm} arm')
@@ -50,13 +53,19 @@ for arm in ['red', 'blue']:
                 order = i + 37
             
             spec = d[6][i] # relative fluxing (blaze corrected)
-            
+            unc  = d[3][i] # snr
+
+            # remove outliers and negative values
+
             if arm == 'blue': 
                 string = 'b'
             else: 
                 string = 'r'
             
-            np.savetxt(f'{target_short}_spectra_full/{string}_e{expnum}_o0{order}_flux.txt', spec)
+            np.save(f'{target_short}_spectra_full/{string}_e{expnum}_o0{order}_flux.npy', spec)
+            np.save(f'{target_short}_uncertainties_full/{string}_e{expnum}_o0{order}_unc.npy', unc)
+
+print(exitt)
 
 # blue arm wavelength solution
 import scipy.ndimage as ndi
@@ -64,6 +73,11 @@ from numpy.polynomial import Chebyshev
 plt.style.use('paper.mplstyle')
 
 SPEC_RE = re.compile(r'spec(\d+)\s*=\s*"([^"]+)"')
+
+from datetime import datetime
+now = datetime.now()
+dir = target_short + '_results_spectra_' + str(now.date()) + '/'
+os.makedirs(dir, exist_ok=True)
 
 end = len(d[1]) # should be approx 36
 
@@ -149,11 +163,11 @@ for arm in ['blue']:
             axs[i].set_ylabel('Normalized flux')
             
             g = np.column_stack((wl, f_norm))
-            np.save(f'{target_short}_resultsspectra_2026-05-13/wasp107b_spec_wlsol_round1_order{order}_exp{j}.npy', g)
+            np.save(f'{dir}{planet}_spec_wlsol_round1_order{order}_exp{j}.npy', g)
             
 # axs[18].axvline(3933.66)
 # axs[18].axvline(3968.47)
 # axs[18].set_xlim(3930,3940)
 axs[-1].set_xlabel('Wavelength ($\AA$)')
-plt.savefig(f'{target}_blue_round1.png', facecolor='w', dpi = 200)
+plt.savefig(f'Plots/{target}_blue_round1.png', facecolor='w', dpi = 200)
 plt.close()
