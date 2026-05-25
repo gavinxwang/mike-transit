@@ -13,12 +13,11 @@
 
 1. Edit and run `change-target-names.py` to give each spectrum a unique object identifier. This prevents them from being merged into a single spectrum.
 2. Extract the 1D spectra and related files using the [MIKE Pipeline](https://code.obs.carnegiescience.edu/pipelines/mike).
-3. Run `write-order-fluxes.py` to extract the flux for each order.
+3. Run `write-order-fluxes.py` to extract the flux for each order. This also gives the wavelength solution for the blue arm.
 4. For the red arm, refine the wavelength calibration using `run_wl_solver.py`, which calls `MIKE_wavelength_solver.py`. Remember to input the system properties. Run first with `roundno = 1`, then `roundno = 2`.
-5. For the blue arm, due to the lower signal and discrepancy with models, run `blue-arm-solver.py`.
-6. Run `generate-spectrum.py` to get the transmission spectrum. Steps include building the combined out-of-transit stellar spectrum, subtracting stellar effects, and performing telluric correction with [SysRem](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract) before generating the transmission spectrum in the planetary rest frame.
-7. Run `inject-recovery.py` to obtain the optimal number of SysRem iterations as well as empirical uncertainties on measured planetary absorption/emission.
-8. Finally, run `fit-absorption.py` to search for planetary atmospheric signals.
+5. Run `generate-spectrum.py` to get the transmission spectrum. Steps include building the combined out-of-transit stellar spectrum, subtracting stellar effects, and performing telluric correction with [SysRem](https://ui.adsabs.harvard.edu/abs/2005MNRAS.356.1466T/abstract) before generating the transmission spectrum in the planetary rest frame.
+6. Run `inject-recovery.py` to obtain the optimal number of SysRem iterations as well as empirical uncertainties on measured planetary absorption/emission.
+7. Finally, run `fit-absorption.py` to search for planetary atmospheric signals.
 
 ## Acknowledgments
 
