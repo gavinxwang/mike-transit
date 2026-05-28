@@ -3,6 +3,16 @@
 
 **Authors**: Gavin Wang ([gxwang22@gmail.com](gxwang22@gmail.com)), Jessica Spake
 
+## Dependencies
+
+1. `scipy`
+2. `numpy`
+3. `ray` -- not required but recommended
+4. `PyAstronomy`
+5. `specutils`
+6. `astropy`
+7. `matplotlib`
+
 ## Requirements
 
 1. Install the [MIKE Pipeline](https://code.obs.carnegiescience.edu/pipelines/mike).
