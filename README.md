@@ -12,6 +12,7 @@
 5. `specutils`
 6. `astropy`
 7. `matplotlib`
+8. `TelFit`
 
 ## Requirements
 
