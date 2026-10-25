@@ -9,8 +9,7 @@ from astropy.io import fits
 from numpy.polynomial import Chebyshev
 
 from constants import (
-    BASE_DIR, BLUE_PIPELINE_WAVESOL, PIPELINE_FOLDER, SPECTRA_FOLDER_BLUE, SPECTRA_FOLDER_RED,
-    target_string,
+    BASE_DIR, PIPELINE_FOLDER, SPECTRA_FOLDER_BLUE, SPECTRA_FOLDER_RED, TARGET, target_string,
 )
 
 # continuum normalization of the round-0 spectra
@@ -108,7 +107,8 @@ def main():
         spectra_dir = BASE_DIR / (SPECTRA_FOLDER_BLUE if arm == 'blue' else SPECTRA_FOLDER_RED)
         spectra_dir.mkdir(parents=True, exist_ok=True)
 
-        fs = sorted((str(p) for p in products.glob(f'*{arm}_multi.fits')), key=natural_keys)
+        # only the target's exposures (other stars observed the same night can be in the same folder)
+        fs = sorted((str(p) for p in products.glob(f'{TARGET.lower()}-*{arm}_multi.fits')), key=natural_keys)
         print(f'{arm} arm: found {len(fs)} exposures')
 
         n_orders = fits.getdata(fs[0]).shape[1]
@@ -127,13 +127,9 @@ def main():
 
                 np.savetxt(spectra_full / f'{arm[0]}_e0{expnum}_o{order}_flux.txt', data[6][i])
                 np.save(unc_full / f'{arm[0]}_e{expnum}_o0{order}_unc.npy', snr)
-                np.save(unc_full / f'{arm[0]}_e{expnum}_o0{order}_wl.npy', wl)
 
                 f_norm = normalize(spec)
-                spec_norm = np.column_stack((wl, f_norm))
-                np.save(spectra_dir / f'{target_string}_spec_wlsol_round0_order{order}_exp{j}.npy', spec_norm)
-                if arm == 'blue' and BLUE_PIPELINE_WAVESOL:
-                    np.save(spectra_dir / f'{target_string}_spec_wlsol_round1_order{order}_exp{j}.npy', spec_norm)
+                np.save(spectra_dir / f'{target_string}_spec_wlsol_round0_order{order}_exp{j}.npy', np.column_stack((wl, f_norm)))
 
                 axs[i].plot(wl, f_norm)
                 iqr = np.quantile(f_norm, 0.9) - np.quantile(f_norm, 0.1)

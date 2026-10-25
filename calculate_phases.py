@@ -1,20 +1,35 @@
 # Compute the orbital phase, airmass and stellar RV of each exposure from the raw FITS headers
 
+import math
+
 import numpy as np
 from astropy import units as u
 from astropy.coordinates import EarthLocation, SkyCoord
 from astropy.io import fits
 from astropy.time import Time
+from PyAstronomy import pyasl
 
 from constants import (
-    AIRMASS_FILE, BASE_DIR, MID_TRANSIT, MISSING_SLOT_BLUE, P_DAYS, PHASES_FILE, RAW_FOLDER,
-    RVS_FILE, TARGET,
+    AIRMASS_FILE, BASE_DIR, LCO_ALT, LCO_LAT, LCO_LON, MID_TRANSIT, MISSING_SLOT_BLUE, P_DAYS,
+    PHASES_FILE, RAW_FOLDER, RVS_FILE, TARGET,
 )
-from mike_wavelength_solver import compute_rvs
 from planet import make_planet
 
 # use the arm with no missing exposures
 arm = 'b' if MISSING_SLOT_BLUE is None else 'r'
+
+
+def compute_rvs(exoplanet, hjds):
+    # observer-frame stellar RVs in m/s
+    rvs = np.zeros(len(hjds))
+    for i, hjd in enumerate(hjds):
+        corr, bjd = pyasl.helcorr(LCO_LON, LCO_LAT, LCO_ALT, exoplanet.radeg, exoplanet.decdeg, hjd)
+        if exoplanet.geom == 'eclipse':
+            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 + hjd) / exoplanet.P)
+        elif exoplanet.geom == 'transit':
+            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 - hjd) / exoplanet.P)
+        rvs[i] = exoplanet.sysrv + reflex - corr * 1000
+    return rvs
 
 
 def main():
@@ -38,7 +53,7 @@ def main():
         ltt_bary = mid_time.light_travel_time(target_coord, location=lco)
         bjds.append((mid_time.tdb + ltt_bary).jd)
 
-        # same mid-exposure time as get_spectra_list in mike_wavelength_solver.py
+        # mid-exposure time used for the RVs
         t = Time(header['DATE-OBS'], format='isot', scale='utc')
         hjds.append(t.jd + 0.5 * header['EXPTIME'] / (24 * 60 * 60))
         airmass.append(header['AIRMASS'])

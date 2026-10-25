@@ -2,8 +2,7 @@
 
 import mike_wavelength_solver
 from constants import (
-    BASE_DIR, OBS_DATE, RAW_FOLDER, SKY_FILE, SPECTRA_FOLDER_BLUE, SPECTRA_FOLDER_RED,
-    STELLAR_MODEL_FILE, target_string,
+    BASE_DIR, SKY_FILE, SPECTRA_FOLDER_BLUE, SPECTRA_FOLDER_RED, STELLAR_MODEL_FILE, target_string,
 )
 from planet import make_planet
 
@@ -16,7 +15,6 @@ resolution = 1  # gaussian smoothing of the model, pixels
 def main():
     planet = make_planet()
     specdir = BASE_DIR / f'{target_string}_spectra_full'
-    rawdir = BASE_DIR / RAW_FOLDER
 
     for order in orders:
         blue = order >= 71
@@ -34,8 +32,8 @@ def main():
             skyspec_fn = SKY_FILE or BASE_DIR / f'{target_string}_tellurics' / f'telluric_model_order{order}.txt'
 
         mike_wavelength_solver.main(
-            exoplanet=planet, order=order, sky_fac=sky_fac, resolution=resolution, obsdate=OBS_DATE,
-            specdir=specdir, rawdir=rawdir, newdir=newdir, phoenix_fn=phoenix_fn, skyspec_fn=skyspec_fn,
+            exoplanet=planet, order=order, sky_fac=sky_fac, resolution=resolution,
+            specdir=specdir, newdir=newdir, phoenix_fn=phoenix_fn, skyspec_fn=skyspec_fn,
             modloc=newdir, modbase=f'{target_string}_stellar_spec_transit_order{{0}}.npy', roundno=roundno,
         )
 

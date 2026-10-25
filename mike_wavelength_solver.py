@@ -1,17 +1,13 @@
 # Fit the wavelength solution and continuum of each exposure against a stellar (+ sky) model
 
-import math
 import os
 
 import numpy as np
 import scipy.ndimage
-from astropy.io import fits
-from astropy.time import Time
-from PyAstronomy import pyasl
 from scipy import interpolate, stats
 from scipy.optimize import differential_evolution
 
-from constants import LCO_ALT, LCO_LAT, LCO_LON, NUM_CPUS, RED_OBJECT_OFFSET, use_ray
+from constants import NUM_CPUS, PHASES_FILE, RVS_FILE, get_geometry, rvs_for_arm, use_ray
 from utils import doppler
 
 # order -> (central wavelength [A], order width [A])
@@ -25,16 +21,15 @@ GRATING = {
     46: (7480.0, 200), 45: (7635.0, 220), 44: (7800.0, 220), 43: (7975.0, 220),
     42: (8175.0, 230), 41: (8375.0, 230), 40: (8585.0, 230), 39: (8825.0, 250),
     38: (9045.0, 250), 37: (9275.0, 250),
-    107: (3330, 70), 106: (3360, 70), 105: (3390, 70), 104: (3420, 70),
-    103: (3455, 80), 102: (3490, 70), 101: (3530, 70), 100: (3560, 60),
-    99: (3590, 70), 98: (3630, 70), 97: (3670, 70), 96: (3710, 70),
-    95: (3750, 70), 94: (3790, 70), 93: (3830, 70), 92: (3870, 70),
-    91: (3910, 70), 90: (3950, 70), 89: (4000, 90), 88: (4050, 70),
-    87: (4090, 70), 86: (4140, 90), 85: (4190, 70), 84: (4240, 90),
-    83: (4290, 70), 82: (4340, 90), 81: (4400, 90), 80: (4460, 90),
-    79: (4510, 70), 78: (4560, 90), 77: (4620, 90), 76: (4680, 90),
-    75: (4750, 110), 74: (4820, 90), 73: (4880, 90), 72: (4950, 110),
-    71: (5020, 90),
+    106: (3330, 70), 105: (3360, 70), 104: (3390, 70), 103: (3420, 70),
+    102: (3455, 80), 101: (3490, 70), 100: (3530, 70), 99: (3560, 60),
+    98: (3590, 70), 97: (3630, 70), 96: (3670, 70), 95: (3710, 70),
+    94: (3750, 70), 93: (3790, 70), 92: (3830, 70), 91: (3870, 70),
+    90: (3910, 70), 89: (3950, 70), 88: (4000, 90), 87: (4050, 70),
+    86: (4090, 70), 85: (4140, 90), 84: (4190, 70), 83: (4240, 90),
+    82: (4290, 70), 81: (4340, 90), 80: (4400, 90), 79: (4460, 90),
+    78: (4510, 70), 77: (4560, 90), 76: (4620, 90), 75: (4680, 90),
+    74: (4750, 110), 73: (4820, 90), 72: (4880, 90), 71: (4950, 110),
 }
 
 TRUNC = 10  # pixels cut from each end of the spectrum
@@ -60,20 +55,22 @@ def solve_exposure(i, datmed, bounds, ncol, shifted_modwl, smooth_model, spec_pr
     return chisq(results.x, datmed, np.arange(ncol), shifted_modwl, smooth_model)
 
 
-def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir,
-         phoenix_fn, skyspec_fn, modloc, modbase, roundno):
+def main(exoplanet, order, sky_fac, resolution, specdir, newdir, phoenix_fn, skyspec_fn, modloc, modbase, roundno):
     # round 1 shifts a stellar model (+ sky) into the observer frame for each exposure;
     # round 2 uses the combined stellar spectrum, which is already in the data frame
     needsky = roundno == 1
 
-    speclist, nexp, npix, hjds = get_spectra_list(specdir, rawdir, order)
+    speclist, nexp, npix = get_spectra_list(specdir, order)
 
     allspec = np.zeros([nexp, npix])
     for i in range(nexp):
         allspec[i, :] = np.genfromtxt(f'{specdir}/{speclist[i]}', usecols=(0,), unpack=True)
-    rvs = compute_rvs(exoplanet, hjds)
 
-    np.save(f'{newdir}/{exoplanet.name}_{obsdate}_spectra_noshift_{order}.npy', allspec)
+    # stellar RVs from calculate_phases.py
+    _, nexp_arm, exposure_to_full = get_geometry(order, len(np.loadtxt(PHASES_FILE)))
+    if nexp_arm != nexp:
+        raise RuntimeError(f'order {order}: {nexp} spectra but {nexp_arm} exposures expected')
+    rvs = rvs_for_arm(np.load(RVS_FILE), exposure_to_full)
 
     # cut first and last part of spectrum
     spectra = allspec[:, TRUNC:-TRUNC]
@@ -100,7 +97,7 @@ def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir
             bounds.append((med_r[i] - half, med_r[i] + half))
         print(f'using bounds: {bounds}')
 
-    sky_wl_air, sky_fl, mod_wl_air, mod_fl = get_sky_and_phoenix(skyspec_fn, phoenix_fn, mod_lims, modloc, modbase, order, needsky)
+    sky_wl_air, sky_fl, mod_wl_air, mod_fl = get_sky_and_phoenix(skyspec_fn, phoenix_fn, mod_lims, modloc, modbase, order, needsky and sky_fac > 0)
     spec_prefix = f'{exoplanet.name}_spec_wlsol_round{roundno}'
 
     if use_ray and not ray.is_initialized():
@@ -115,7 +112,6 @@ def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir
         if needsky:
             shifted_modwl, smooth_model = build_stellar_sky_model(
                 rvs[i], mod_wl_air, mod_fl, sky_wl_air, sky_fl, sky_fac, order_lims, resolution)
-            np.savez(f'{newdir}/order{order}_exp{i}_model.npy', f=smooth_model, w=shifted_modwl)
         else:
             shifted_modwl, smooth_model = mod_wl_air, mod_fl
 
@@ -133,42 +129,15 @@ def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir
             f.write(f'{cv}\n')
 
 
-def compute_rvs(exoplanet, hjds):
-    # observer-frame stellar RVs in m/s
-    rvs = np.zeros(len(hjds))
-    for i, hjd in enumerate(hjds):
-        corr, bjd = pyasl.helcorr(LCO_LON, LCO_LAT, LCO_ALT, exoplanet.radeg, exoplanet.decdeg, hjd)
-        if exoplanet.geom == 'eclipse':
-            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 + hjd) / exoplanet.P)
-        elif exoplanet.geom == 'transit':
-            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 - hjd) / exoplanet.P)
-        rvs[i] = exoplanet.sysrv + reflex - corr * 1000
-    return rvs
-
-
-def get_spectra_list(specdir, rawdir, order):
-    # find all text files containing spectra for this order (e.g. b_e039_o37_flux.txt),
-    # and the raw FITS file for each, used for the date and exposure time
-    flist = os.listdir(specdir)
-    speclist = np.array([f for f in flist if f'{order}_flux.txt' in f])
-    rawlist = np.array([f'{f[0]}{int(f[3:6]) - (RED_OBJECT_OFFSET if f[0] == "r" else 0):04d}.fits' for f in speclist])
+def get_spectra_list(specdir, order):
+    # find all text files containing spectra for this order (e.g. b_e039_o37_flux.txt), sorted by exposure number
+    speclist = np.array([f for f in os.listdir(specdir) if f'{order}_flux.txt' in f])
     exp_num = np.array([f[3:6] for f in speclist]).astype(int)
-
-    # sort lists by exposure numbers
     speclist = speclist[np.argsort(exp_num)]
-    rawlist = rawlist[np.argsort(exp_num)]
 
-    nexp = len(rawlist)
+    nexp = len(speclist)
     npix = len(np.genfromtxt(f'{specdir}/{speclist[0]}', usecols=0, unpack=True))
-
-    # mid-exposure time of each exposure
-    hjds = np.zeros(nexp)
-    for i in range(nexp):
-        header = fits.getheader(f'{rawdir}/{rawlist[i]}')
-        t = Time(header['DATE-OBS'], format='isot', scale='utc')
-        hjds[i] = t.jd + 0.5 * header['EXPTIME'] / (24 * 60 * 60)
-
-    return speclist, nexp, npix, hjds
+    return speclist, nexp, npix
 
 
 def build_stellar_sky_model(rv, mod_wl_air, mod_fl, sky_wl_air, sky_fl, sky_fac, order_lims, resolution):
@@ -176,9 +145,10 @@ def build_stellar_sky_model(rv, mod_wl_air, mod_fl, sky_wl_air, sky_fl, sky_fac,
     shifted_modwl = doppler(rv, mod_wl_air)
     in_order = (shifted_modwl > order_lims[0]) & (shifted_modwl < order_lims[1])
     modmed = mod_fl / np.nanmedian(mod_fl[in_order])
-    interpf_sky = interpolate.interp1d(sky_wl_air, sky_fl, kind='cubic', bounds_error=False, fill_value=0)
-    mod_n_sky = modmed + sky_fac * interpf_sky(shifted_modwl) - sky_fac
-    smooth_model = scipy.ndimage.gaussian_filter1d(mod_n_sky, resolution)
+    if sky_fac:
+        interpf_sky = interpolate.interp1d(sky_wl_air, sky_fl, kind='cubic', bounds_error=False, fill_value=0)
+        modmed = modmed + sky_fac * interpf_sky(shifted_modwl) - sky_fac
+    smooth_model = scipy.ndimage.gaussian_filter1d(modmed, resolution)
     return shifted_modwl, smooth_model
 
 

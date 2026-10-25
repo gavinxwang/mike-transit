@@ -69,7 +69,6 @@ if TARGET == 'WASP-107':
     target_string = 'wasp107b'
     TARGET_LABEL = 'WASP-107 b'
     RAW_FOLDER = 'ut240502_03'  # contains original FITS files
-    OBS_DATE = '2024-05-02'
 
     SPECTRA_FOLDER_RED = 'w107_results_spectra_2025-08-08'
     SPECTRA_FOLDER_BLUE = 'w107_results_spectra_2026-05-25'
@@ -88,8 +87,6 @@ if TARGET == 'WASP-107':
     MISSING_SLOT_RED = 3
     MISSING_SLOT_BLUE = None
 
-    # blue arm uses the pipeline wavelength solution as round 1 (large mismatch with the stellar model)
-    BLUE_PIPELINE_WAVESOL = True
 
     # offset added to red-arm object numbers so they match the blue arm
     RED_OBJECT_OFFSET = 0
@@ -113,7 +110,6 @@ elif TARGET == 'WASP-55':
     target_string = 'wasp55b'
     TARGET_LABEL = 'WASP-55 b'
     RAW_FOLDER = 'ut250628_29'
-    OBS_DATE = '2025-06-28'
 
     SPECTRA_FOLDER_RED = 'w55_results_spectra_2025-07-09'
     SPECTRA_FOLDER_BLUE = 'w55_results_spectra_2026-05-25'
@@ -127,8 +123,6 @@ elif TARGET == 'WASP-55':
 
     MISSING_SLOT_RED = None
     MISSING_SLOT_BLUE = 17
-
-    BLUE_PIPELINE_WAVESOL = False
 
     RED_OBJECT_OFFSET = 5
 

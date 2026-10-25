@@ -167,15 +167,14 @@ def remove_outliers(flux, errors):
     return cleaned_flux
 
 
-def load_errors(order, blue, nexp):
-    # pipeline uncertainties and their wavelengths, both in the earth frame
+def load_errors(order, blue, nexp, spectra_dir):
+    # pipeline uncertainties and the pipeline wavelengths (from round 0), both in the earth frame
     arm_prefix = 'b' if blue else 'r'
     fs = sorted((BASE_DIR / f'{target_string}_uncertainties_cleaned').glob(f'{arm_prefix}*_o0{order}_unc.npy'))
-    wls = sorted((BASE_DIR / f'{target_string}_uncertainties_full').glob(f'{arm_prefix}*_o0{order}_wl.npy'))
     if len(fs) != nexp:
         return None, None
     errors = np.array([np.load(f)[10:-10] for f in fs])
-    errors_wls = np.array([np.load(f)[10:-10] for f in wls])
+    errors_wls = np.array([np.load(spectra_dir / f'{target_string}_spec_wlsol_round0_order{order}_exp{j}.npy')[10:-10, 0] for j in range(nexp)])
     return errors, errors_wls
 
 
@@ -240,7 +239,7 @@ def main():
             print(f'  building telluric transmission models for order {order} (mask T < {TELLURIC_DEPTH_LIMIT})')
             telluric_native = compute_telluric_transmission(wls_earth, order, nexp, exposure_to_full, airmass_full)
 
-        errors_raw, errors_wls = load_errors(order, blue, nexp)
+        errors_raw, errors_wls = load_errors(order, blue, nexp, spectra_dir)
         if errors_raw is None:
             print('  number of error files does not match fluxes, skipping')
             continue

@@ -8,11 +8,10 @@ from scipy import interpolate
 from scipy.optimize import differential_evolution
 
 from constants import (
-    BASE_DIR, BLUE_ORDERS, NUM_CPUS, PHASES_FILE, RAW_FOLDER, SPECTRA_FOLDER_BLUE,
-    get_geometry, oot_mask, target_string, use_ray,
+    BASE_DIR, BLUE_ORDERS, NUM_CPUS, PHASES_FILE, RVS_FILE, SPECTRA_FOLDER_BLUE, get_geometry,
+    oot_mask, rvs_for_arm, target_string, use_ray,
 )
-from mike_wavelength_solver import cheby3, cheby5, compute_rvs, get_spectra_list, scale_col
-from planet import make_planet
+from mike_wavelength_solver import cheby3, cheby5, scale_col
 from utils import doppler
 
 orders = BLUE_ORDERS
@@ -53,7 +52,7 @@ def apply_corrections(pars, wl_pipe, flux, x):
 
 
 def load_unc_paths(order):
-    # uncertainty files sorted by exposure number (matches get_spectra_list)
+    # uncertainty files sorted by exposure number
     files = list(UNC_DIR.glob(f'b_e*_o0{order}_unc.npy')) or list(UNC_DIR.glob(f'b_e*_o{order}_unc.npy'))
     if not files:
         raise FileNotFoundError(f'no uncertainty files for order {order} in {UNC_DIR}')
@@ -114,7 +113,7 @@ def fit_exposure(i, wl_pipe, flux, x, mod_wl_stellar, mod_fl, rv, weights, order
     return chisq_fit(result.x, wl_pipe, flux, x, mod_wl, mod_fl, weights)
 
 
-def solve_order(order, spectra_folder, specdir, rawdir):
+def solve_order(order, spectra_folder):
     phases_full = np.loadtxt(PHASES_FILE)
     _, nexp, exposure_to_full = get_geometry(order, len(phases_full))
     phases = phases_full[exposure_to_full] if exposure_to_full is not None else phases_full
@@ -134,12 +133,8 @@ def solve_order(order, spectra_folder, specdir, rawdir):
         print(f'order {order}: all {nexp} round2 files exist, skipping')
         return
 
-    planet = make_planet()
-    _, nexp_raw, _, hjds = get_spectra_list(specdir, rawdir, order)
-    if nexp_raw != nexp:
-        raise RuntimeError(f'order {order}: {nexp} exposures expected, {nexp_raw} raw files found')
-
-    rvs = compute_rvs(planet, hjds)
+    # stellar RVs from calculate_phases.py
+    rvs = rvs_for_arm(np.load(RVS_FILE), exposure_to_full)
     mod_wl_stellar, mod_fl = build_oot_template_stellar(round1_paths, oot, rvs)
     if save_template:
         np.save(spectra_folder / f'{target_string}_stellar_spec_transit_order{order}.npy',
@@ -176,14 +171,12 @@ def solve_order(order, spectra_folder, specdir, rawdir):
 
 def main():
     spectra_folder = BASE_DIR / SPECTRA_FOLDER_BLUE
-    specdir = BASE_DIR / f'{target_string}_spectra_full'
-    rawdir = BASE_DIR / RAW_FOLDER
 
     if use_ray and not ray.is_initialized():
         ray.init(num_cpus=NUM_CPUS, runtime_env={'env_vars': {'PYTHONPATH': os.path.dirname(os.path.abspath(__file__))}})
 
     for order in orders:
-        solve_order(order, spectra_folder, specdir, rawdir)
+        solve_order(order, spectra_folder)
 
 
 if __name__ == '__main__':
