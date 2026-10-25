@@ -11,7 +11,7 @@ from PyAstronomy import pyasl
 from scipy import interpolate, stats
 from scipy.optimize import differential_evolution
 
-from constants import LCO_ALT, LCO_LAT, LCO_LON, NUM_CPUS, use_ray
+from constants import LCO_ALT, LCO_LAT, LCO_LON, NUM_CPUS, RED_OBJECT_OFFSET, use_ray
 from utils import doppler
 
 # order -> (central wavelength [A], order width [A])
@@ -66,7 +66,7 @@ def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir
     # round 2 uses the combined stellar spectrum, which is already in the data frame
     needsky = roundno == 1
 
-    speclist, nexp, npix, hjds = get_spectra_list(specdir, rawdir, newdir, order, exoplanet, obsdate)
+    speclist, nexp, npix, hjds = get_spectra_list(specdir, rawdir, order)
 
     allspec = np.zeros([nexp, npix])
     for i in range(nexp):
@@ -74,7 +74,6 @@ def main(exoplanet, order, sky_fac, resolution, obsdate, specdir, rawdir, newdir
     rvs = compute_rvs(exoplanet, hjds)
 
     np.save(f'{newdir}/{exoplanet.name}_{obsdate}_spectra_noshift_{order}.npy', allspec)
-    np.save(f'{newdir}/{exoplanet.name}_rvs.npy', rvs)
 
     # cut first and last part of spectrum
     spectra = allspec[:, TRUNC:-TRUNC]
@@ -147,12 +146,12 @@ def compute_rvs(exoplanet, hjds):
     return rvs
 
 
-def get_spectra_list(specdir, rawdir, newdir, order, exoplanet, obsdate):
+def get_spectra_list(specdir, rawdir, order):
     # find all text files containing spectra for this order (e.g. b_e039_o37_flux.txt),
-    # and the raw FITS file for each, used for the date, exposure time and airmass
+    # and the raw FITS file for each, used for the date and exposure time
     flist = os.listdir(specdir)
     speclist = np.array([f for f in flist if f'{order}_flux.txt' in f])
-    rawlist = np.array([f[0] + '0' + f[3:6] + '.fits' for f in speclist])
+    rawlist = np.array([f'{f[0]}{int(f[3:6]) - (RED_OBJECT_OFFSET if f[0] == "r" else 0):04d}.fits' for f in speclist])
     exp_num = np.array([f[3:6] for f in speclist]).astype(int)
 
     # sort lists by exposure numbers
@@ -164,15 +163,11 @@ def get_spectra_list(specdir, rawdir, newdir, order, exoplanet, obsdate):
 
     # mid-exposure time of each exposure
     hjds = np.zeros(nexp)
-    airmass = np.zeros(nexp)
     for i in range(nexp):
         header = fits.getheader(f'{rawdir}/{rawlist[i]}')
         t = Time(header['DATE-OBS'], format='isot', scale='utc')
         hjds[i] = t.jd + 0.5 * header['EXPTIME'] / (24 * 60 * 60)
-        airmass[i] = header['AIRMASS']
 
-    np.savetxt(f'{newdir}/{exoplanet.name}_{obsdate}_HJDs.txt', hjds)
-    np.savetxt(f'{newdir}/{exoplanet.name}_{obsdate}_airmass.txt', airmass)
     return speclist, nexp, npix, hjds
 
 

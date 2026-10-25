@@ -21,21 +21,22 @@
 
 ## Workflow
 
-Set the target, folder names, and system properties in `constants.py` before running any step. Run every script from the data directory.
+Run every script from the data directory.
 
-1. Edit and run `change_target_names.py` to give each spectrum a unique object identifier. This prevents them from being merged into a single spectrum.
-2. Extract the 1D spectra and related files using the [MIKE Pipeline](https://code.obs.carnegiescience.edu/pipelines/mike).
-3. Run `calculate_phases.py` to compute the orbital phase of each exposure from the FITS headers.
-4. Run `write_order_fluxes.py` to extract the flux and uncertainties for each order. This also saves the pipeline wavelength solution, which is used directly for the blue arm.
-5. Run `clean_uncertainties.py` to replace bad values and outliers in the pipeline uncertainties.
-6. Run `get_tellurics.py` to fit a [TelFit](https://github.com/kgullikson88/Telluric-Fitter) telluric model to each red order, used in the red-arm wavelength calibration.
-7. Refine the red-arm wavelength calibration with `solve_wavelength.py`, which calls `mike_wavelength_solver.py`. 
-    1. Run with `roundno = 1` to fit each exposure against the BT-Settl spectrum and telluric model. This also saves the stellar radial velocities.
+1. Set the target, folder names, and system properties in `constants.py`.
+2. Run `change_target_names.py` to give each spectrum a unique object identifier. This prevents them from being merged into a single spectrum.
+3. Extract the 1D spectra and related files using the [MIKE Pipeline](https://code.obs.carnegiescience.edu/pipelines/mike).
+4. Run `calculate_phases.py` to compute the orbital phase, airmass and stellar radial velocity of each exposure from the FITS headers.
+5. Run `write_order_fluxes.py` to extract the flux and uncertainties for each order. This also saves the pipeline wavelength solution, which is used directly for the blue arm.
+6. Run `clean_uncertainties.py` to replace bad values and outliers in the pipeline uncertainties.
+7. Run `get_tellurics.py` to fit a [TelFit](https://github.com/kgullikson88/Telluric-Fitter) telluric model to each red order, used in the red-arm wavelength calibration.
+8. Refine the red-arm wavelength calibration with `solve_wavelength.py`, which calls `mike_wavelength_solver.py`. 
+    1. Run with `roundno = 1` to fit each exposure against the BT-Settl spectrum and telluric model.
     2. Run `combine_spectrum.py` to build the combined out-of-transit stellar spectrum for each order.
     3. Run with `roundno = 2` to fit each exposure against the combined stellar spectrum.
-8. For the blue arm for cooler host stars, run `blue_round2.py` to refine the pipeline wavelength solution against the combined out-of-transit stellar spectrum. 
-9. Run `generate_river.py` to build the 2D river plots for each feature. Steps include dividing by the out-of-transit stellar spectrum, removing outliers, subtracting stellar effects, and masking strong telluric lines.
-10. Finally, run `transmission_spectrum.py` to shift the rivers into the planetary rest frame and generate the transmission spectrum around each feature.
+9. For the blue arm for cooler host stars, run `blue_round2.py` to refine the pipeline wavelength solution against the combined out-of-transit stellar spectrum. 
+10. Run `generate_river.py` to build the 2D river plots for each feature. Steps include dividing by the out-of-transit stellar spectrum, removing outliers, subtracting stellar effects, and masking strong telluric lines.
+11. Finally, run `transmission_spectrum.py` to shift the rivers into the planetary rest frame and generate the transmission spectrum around each feature.
 
 ## Sensitivity Prediction
 

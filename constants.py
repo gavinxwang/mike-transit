@@ -74,9 +74,7 @@ if TARGET == 'WASP-107':
     SPECTRA_FOLDER_RED = 'w107_results_spectra_2025-08-08'
     SPECTRA_FOLDER_BLUE = 'w107_results_spectra_2026-05-25'
 
-    RVS_FILE = BASE_DIR / 'w107_results_spectra_2026-05-13' / 'wasp107b_rvs.npy'
     PHASES_FILE = BASE_DIR / 'wasp107_mike_phases.txt'
-    AIRMASS_FILE = BASE_DIR / 'w107_airmass.txt'
 
     # stellar model for round 1 of the wavelength solution
     STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'lte043-0.0-0.0a+0.0.BT-Settl.7'
@@ -120,9 +118,7 @@ elif TARGET == 'WASP-55':
     SPECTRA_FOLDER_RED = 'w55_results_spectra_2025-07-09'
     SPECTRA_FOLDER_BLUE = 'w55_results_spectra_2026-05-25'
 
-    RVS_FILE = BASE_DIR / SPECTRA_FOLDER_RED / 'wasp55b_rvs.npy'
     PHASES_FILE = BASE_DIR / 'wasp55_mike_phases.txt'
-    AIRMASS_FILE = BASE_DIR / 'w55_airmass.txt'
 
     STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'lte060-4.5-0.0a+0.0.BT-NextGen.7'
     SKY_FILE = BASE_DIR / 'wavesol' / 'flat_sky_angstrom.txt'
@@ -147,6 +143,10 @@ elif TARGET == 'WASP-55':
 
     P_DAYS = 4.46563013
     K_MS = 131640.34077
+
+# written by calculate_phases.py, one value per exposure
+RVS_FILE = BASE_DIR / f'{target_string}_rvs.npy'
+AIRMASS_FILE = BASE_DIR / f'{target_string}_airmass.txt'
 
 START_TRANSIT_PHASE = (START_TRANSIT - MID_TRANSIT) / P_DAYS
 END_TRANSIT_PHASE = (END_TRANSIT - MID_TRANSIT) / P_DAYS

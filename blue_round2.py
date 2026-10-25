@@ -8,7 +8,7 @@ from scipy import interpolate
 from scipy.optimize import differential_evolution
 
 from constants import (
-    BASE_DIR, BLUE_ORDERS, NUM_CPUS, OBS_DATE, PHASES_FILE, RAW_FOLDER, SPECTRA_FOLDER_BLUE,
+    BASE_DIR, BLUE_ORDERS, NUM_CPUS, PHASES_FILE, RAW_FOLDER, SPECTRA_FOLDER_BLUE,
     get_geometry, oot_mask, target_string, use_ray,
 )
 from mike_wavelength_solver import cheby3, cheby5, compute_rvs, get_spectra_list, scale_col
@@ -135,7 +135,7 @@ def solve_order(order, spectra_folder, specdir, rawdir):
         return
 
     planet = make_planet()
-    _, nexp_raw, _, hjds = get_spectra_list(specdir, rawdir, spectra_folder, order, planet, OBS_DATE)
+    _, nexp_raw, _, hjds = get_spectra_list(specdir, rawdir, order)
     if nexp_raw != nexp:
         raise RuntimeError(f'order {order}: {nexp} exposures expected, {nexp_raw} raw files found')
 
