@@ -29,20 +29,20 @@ Set the target, folder names, and system properties in `constants.py` before run
 4. Run `write_order_fluxes.py` to extract the flux and uncertainties for each order. This also saves the pipeline wavelength solution, which is used directly for the blue arm.
 5. Run `clean_uncertainties.py` to replace bad values and outliers in the pipeline uncertainties.
 6. Run `get_tellurics.py` to fit a [TelFit](https://github.com/kgullikson88/Telluric-Fitter) telluric model to each red order, used in the red-arm wavelength calibration.
-7. Refine the red-arm wavelength calibration with `solve_wavelength.py`, which calls `mike_wavelength_solver.py`. Set `roundno` and `orders` at the top of the script.
+7. Refine the red-arm wavelength calibration with `solve_wavelength.py`, which calls `mike_wavelength_solver.py`. 
     1. Run with `roundno = 1` to fit each exposure against the BT-Settl spectrum and telluric model. This also saves the stellar radial velocities.
     2. Run `combine_spectrum.py` to build the combined out-of-transit stellar spectrum for each order.
     3. Run with `roundno = 2` to fit each exposure against the combined stellar spectrum.
-8. For the blue arm, run `blue_round2.py` to refine the pipeline wavelength solution against the combined out-of-transit stellar spectrum, which it builds in the stellar rest frame.
-9. Run `generate_river.py` to build the 2D residual spectra (rivers) for each feature. Steps include dividing by the out-of-transit stellar spectrum, removing outliers, subtracting stellar effects, and masking strong telluric lines.
-10. Finally, run `transmission_spectrum.py` to shift the rivers into the planetary rest frame and generate the transmission spectrum for each feature.
+8. For the blue arm for cooler host stars, run `blue_round2.py` to refine the pipeline wavelength solution against the combined out-of-transit stellar spectrum. 
+9. Run `generate_river.py` to build the 2D river plots for each feature. Steps include dividing by the out-of-transit stellar spectrum, removing outliers, subtracting stellar effects, and masking strong telluric lines.
+10. Finally, run `transmission_spectrum.py` to shift the rivers into the planetary rest frame and generate the transmission spectrum around each feature.
 
-## Precision Prediction
+## Sensitivity Prediction
 
 To estimate the precision achievable with MIKE for any planet, input the system properties in `precision_prediction.py`.
 
 ## Acknowledgments
 
-If you use this code, please cite [add link] and provide a link to this repository.
+If you use this code, please cite [Wang et al. (2026)] and provide a link to this repository.
 
 Feel free to reach out with any questions.
