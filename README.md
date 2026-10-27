@@ -32,9 +32,9 @@ Run every script from the data directory.
 7. Run `get_tellurics.py` to fit a [TelFit](https://github.com/kgullikson88/Telluric-Fitter) telluric model to each red order, used in the red-arm wavelength calibration.
 8. Refine the red-arm wavelength calibration with `solve_wavelength.py`, which calls `mike_wavelength_solver.py`. 
     1. Run with `roundno = 1` to fit each exposure against the BT-Settl spectrum and telluric model.
-    2. Run `combine_spectrum.py` to build the combined out-of-transit stellar spectrum for each order.
+    2. Run `combine_spectrum.py` to build the combined out-of-transit stellar spectrum.
     3. Run with `roundno = 2` to fit each exposure against the combined stellar spectrum.
-9. For the blue arm for cooler host stars, run `blue_round2.py` to refine the pipeline wavelength solution against the combined out-of-transit stellar spectrum. 
+9. For the blue arm, run `blue_round2.py` to refine the pipeline wavelength solution. 
 10. Run `generate_river.py` to build the 2D river plots for each feature. Steps include dividing by the out-of-transit stellar spectrum, removing outliers, subtracting stellar effects, and masking strong telluric lines.
 11. Finally, run `transmission_spectrum.py` to shift the rivers into the planetary rest frame and generate the transmission spectrum around each feature.
 
