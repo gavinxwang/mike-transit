@@ -1,4 +1,4 @@
-# Shift each river to the planet rest frame and compute the transmission spectrum: median(in-transit) / median(oot) - 1
+# shift spectra to the planet rest frame and compute transmission spectra
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,10 +13,10 @@ from utils import doppler
 
 WLSOL_ROUND = 2
 
-C = 299792.458  # km/s
+C = 299792.458 # km/s
 C_MS = C * 1000.0
 
-# shared river color scale (matches generate-river.py)
+# river plot color scale (matches generate-river.py)
 RIVER_VMIN = -0.03
 RIVER_VMAX = 0.03
 
@@ -41,7 +41,7 @@ def map_to_full_phases(data, n_full, exposure_to_full):
 
 
 def to_planet_frame(river, wl_grid, phases, rvs_arm):
-    # shift normalized spectra from earth frame to planet rest frame
+    # shift normalized spectra from Earth frame to planet rest frame
     nexp, _ = river.shape
     planet_data = np.zeros_like(river)
 
@@ -89,7 +89,7 @@ def compute_transmission_errors(errors_planet, phases, transmission):
 
 
 def planet_frame_trace(phases, rvs_vals, rest_wl):
-    # earth-frame wavelength of the planet rest frame (a curve per exposure)
+    # Earth-frame wavelength of the planet rest frame
     v_total_ms = planet_rv_ms(phases) + rvs_vals
     return rest_wl * (1.0 + v_total_ms / C_MS)
 
@@ -142,7 +142,7 @@ def main():
 
         np.savez(out_dir / f'{feature}_order{order}_round{WLSOL_ROUND}.npz', velocity=rep_v, transmission=rep_t, error=rep_e)
 
-        # planet-rest-frame dashed trace for the top panels (a curve in the earth frame)
+        # planet rest frame
         ph_order = np.argsort(phases_arm)
         ph_sorted = phases_arm[ph_order]
         rvs_sorted = rvs_arm[ph_order]
@@ -156,7 +156,6 @@ def main():
         else:
             river_vmin, river_vmax = (RIVER_VMIN, RIVER_VMAX)
 
-        # 5 stacked panels; dedicated colorbar column so it can span all of them
         fig = plt.figure(figsize=(8, 15), constrained_layout=True)
         gs = fig.add_gridspec(5, 2, width_ratios=[1, 0.04])
 
@@ -167,7 +166,7 @@ def main():
         ax4 = fig.add_subplot(gs[4, 0], sharex=ax3)
         cax = fig.add_subplot(gs[:, 1])
 
-        # top three panels: cleaned data, clv model, clv-subtracted river (earth frame)
+        # top three panels: cleaned data, clv model, clv-subtracted river (Earth frame)
         top_axes = [ax0, ax1, ax2]
         top_data = [cleaned, eval_clvs, river]
         top_titles = ['Outliers removed', 'CLV + RM model', 'CLV + RM removed']
@@ -182,7 +181,7 @@ def main():
             ax.axhline(START_TRANSIT_PHASE, color='k', ls='-', lw=1)
             ax.axhline(END_TRANSIT_PHASE, color='k', ls='-', lw=1)
 
-        # dashed planet-rest-frame trace, extended one step past the panel boundaries
+        # planet rest frame trace
         ymin, ymax = ax0.get_ylim()
         pad = 0.04 * (ymax - ymin)
         ph_line = np.concatenate(([ymin - pad], ph_sorted, [ymax + pad]))
@@ -195,7 +194,7 @@ def main():
         ax0.set_ylim(ymin, ymax)
         ax0.set_xlim(rest_wl - wl_half, rest_wl + wl_half)
 
-        # fourth panel: river in the planet rest frame, in velocity space
+        # fourth panel: planet rest frame, velocity space
         Xv, Yv = np.meshgrid(v_km_s, phases_full)
         ax3.pcolormesh(
             Xv, Yv, map_to_full_phases(planet_data, n_full, exposure_to_full),

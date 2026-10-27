@@ -1,4 +1,4 @@
-# Fit the wavelength solution and continuum of each exposure against a stellar (+ sky) model
+# fit the wavelength solution and continuum of each exposure against a stellar (+ sky) model
 
 import os
 
@@ -11,6 +11,8 @@ from constants import NUM_CPUS, PHASES_FILE, RVS_FILE, get_geometry, rvs_for_arm
 from utils import doppler
 
 # order -> (central wavelength [A], order width [A])
+# estimated from MIKE red_atlas and blue_atlas files
+# https://www.lco.cl/wp-content/uploads/telescopes/magellan/instruments/mike/thar_atlas/red-images/red_atlas.pdf
 GRATING = {
     70: (4910, 125), 69: (4980, 145), 68: (5050, 150), 67: (5125.0, 150),
     66: (5200.0, 150), 65: (5287.5, 150), 64: (5362.5, 150), 63: (5450.0, 150),
@@ -32,7 +34,7 @@ GRATING = {
     74: (4750, 110), 73: (4820, 90), 72: (4880, 90), 71: (4950, 110),
 }
 
-TRUNC = 10  # pixels cut from each end of the spectrum
+TRUNC = 10
 
 if use_ray:
     import ray
@@ -55,8 +57,8 @@ def solve_exposure(i, datmed, bounds, ncol, shifted_modwl, smooth_model, spec_pr
     return chisq(results.x, datmed, np.arange(ncol), shifted_modwl, smooth_model)
 
 
-def main(exoplanet, order, sky_fac, resolution, specdir, newdir, phoenix_fn, skyspec_fn, modloc, modbase, roundno):
-    # round 1 shifts a stellar model (+ sky) into the observer frame for each exposure;
+def main(exoplanet, order, sky_fac, resolution, specdir, newdir, stellar_model_fn, skyspec_fn, modloc, modbase, roundno):
+    # round 1 shifts a stellar model (+ sky) into the observer frame for each exposure
     # round 2 uses the combined stellar spectrum, which is already in the data frame
     needsky = roundno == 1
 
@@ -72,7 +74,7 @@ def main(exoplanet, order, sky_fac, resolution, specdir, newdir, phoenix_fn, sky
         raise RuntimeError(f'order {order}: {nexp} spectra but {nexp_arm} exposures expected')
     rvs = rvs_for_arm(np.load(RVS_FILE), exposure_to_full)
 
-    # cut first and last part of spectrum
+    # truncate order edges
     spectra = allspec[:, TRUNC:-TRUNC]
     nexp, ncol = np.shape(spectra)
 
@@ -82,8 +84,7 @@ def main(exoplanet, order, sky_fac, resolution, specdir, newdir, phoenix_fn, sky
     bounds = [(4050, 4090), (b1[0], b1[1]), (order_lims[1] - order_lims[0] - 40, order_lims[1] - order_lims[0] + 40),
               (-10, 10), (-10, 10), (0.7, 1.3), (-10, 10), (-10, 10), (-10, 10), (-10, 10), (-10, 10)]
 
-    # if the second round, constrain bounds around the median of the best-fit values from round 1
-    # floor half-widths so MAD≈0 (params pegged in bootstrap) does not freeze a parameter
+    # in the second round, constrain bounds around the median of the best-fit values from round 1
     if roundno == 2:
         results_round1 = [np.load(f'{newdir}/results_order{order}_exp{i}.npy') for i in range(nexp)]
         med_r = np.median(results_round1, axis=0)
@@ -97,7 +98,7 @@ def main(exoplanet, order, sky_fac, resolution, specdir, newdir, phoenix_fn, sky
             bounds.append((med_r[i] - half, med_r[i] + half))
         print(f'using bounds: {bounds}')
 
-    sky_wl_air, sky_fl, mod_wl_air, mod_fl = get_sky_and_phoenix(skyspec_fn, phoenix_fn, mod_lims, modloc, modbase, order, needsky and sky_fac > 0)
+    sky_wl_air, sky_fl, mod_wl_air, mod_fl = get_sky_and_stellar_model(skyspec_fn, stellar_model_fn, mod_lims, modloc, modbase, order, needsky and sky_fac > 0)
     spec_prefix = f'{exoplanet.name}_spec_wlsol_round{roundno}'
 
     if use_ray and not ray.is_initialized():
@@ -141,7 +142,7 @@ def get_spectra_list(specdir, order):
 
 
 def build_stellar_sky_model(rv, mod_wl_air, mod_fl, sky_wl_air, sky_fl, sky_fac, order_lims, resolution):
-    # phoenix model is in stellar rest frame; sky/telluric model is in earth frame
+    # stellar model is in stellar rest frame; sky/telluric model is in Earth frame
     shifted_modwl = doppler(rv, mod_wl_air)
     in_order = (shifted_modwl > order_lims[0]) & (shifted_modwl < order_lims[1])
     modmed = mod_fl / np.nanmedian(mod_fl[in_order])
@@ -152,8 +153,8 @@ def build_stellar_sky_model(rv, mod_wl_air, mod_fl, sky_wl_air, sky_fl, sky_fac,
     return shifted_modwl, smooth_model
 
 
-def get_sky_and_phoenix(skyspec_fn, phoenix_fn, mod_lims, modloc, modbase, order, needsky):
-    if phoenix_fn is None:
+def get_sky_and_stellar_model(skyspec_fn, stellar_model_fn, mod_lims, modloc, modbase, order, needsky):
+    if stellar_model_fn is None:
         # combined stellar spectrum from combine_spectrum.py
         modarr = np.load(f'{modloc}/{modbase.format(order)}')
         modwl, modspec = modarr[:, 0], modarr[:, 1]
@@ -161,12 +162,12 @@ def get_sky_and_phoenix(skyspec_fn, phoenix_fn, mod_lims, modloc, modbase, order
         mod_fl = modspec[in_lims]
         mod_wl_air = modwl[in_lims]
     else:
-        # solving in the model's own wavelengths, not converting to air
-        lambda_star, fl_phoenix = np.loadtxt(phoenix_fn, usecols=[0, 1], unpack=True)  # wavelength [A], flux [erg/s/cm2/A]
-        fl_phoenix = fl_phoenix[np.argsort(lambda_star)]
+        # model already in air wavelengths
+        lambda_star, fl_model = np.loadtxt(stellar_model_fn, usecols=[0, 1], unpack=True)  # wavelength [A], flux [erg/s/cm2/A]
+        fl_model = fl_model[np.argsort(lambda_star)]
         lambda_star = np.sort(lambda_star)
         in_lims = (lambda_star > mod_lims[0]) & (lambda_star < mod_lims[1])
-        mod_fl = fl_phoenix[in_lims]
+        mod_fl = fl_model[in_lims]
         mod_wl_air = lambda_star[in_lims]
 
     if not needsky:

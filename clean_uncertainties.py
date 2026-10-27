@@ -1,4 +1,4 @@
-# Convert pipeline S/N to uncertainties and replace bad values and outliers
+# convert pipeline S/N to uncertainties and replace bad values and outliers
 
 import warnings
 
@@ -11,10 +11,10 @@ from constants import BASE_DIR, target_string
 
 warnings.filterwarnings('ignore', category=RuntimeWarning)
 
-# orders to skip, as arm + order
+# orders to skip (arm + order)
 skip = ['r071', 'b100', 'b101', 'b102', 'b103', 'b104', 'b105', 'b106']
 
-
+# clean uncertainties
 def clean(unc):
     med = median_filter(unc, size=50)
     unc[np.isinf(unc)] = med[np.isinf(unc)]

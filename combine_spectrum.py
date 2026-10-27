@@ -1,4 +1,4 @@
-# Build combined out-of-transit stellar spectrum for each order
+# build combined out-of-transit stellar spectrum for each order
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,8 +10,7 @@ from constants import (
 )
 
 orders = range(40, 107)
-TRUNC = 10  # pixels dropped from each order edge, where the interpolation extrapolates
-
+TRUNC = 10
 
 def load_oot_spectra(spectra_dir, order, oot):
     wls, fluxes = [], []
@@ -23,7 +22,7 @@ def load_oot_spectra(spectra_dir, order, oot):
 
 
 def combine(wls, fluxes):
-    # interpolate every exposure onto the first exposure's grid, then take the median
+    # interpolate every exposure onto the first exposure's grid, then take median
     wl_grid = wls[0]
     interp_fluxes = np.array([
         interpolate.interp1d(wl, flux, kind='cubic', bounds_error=False, fill_value='extrapolate')(wl_grid)
@@ -34,7 +33,7 @@ def combine(wls, fluxes):
 
 
 def plot_combined(wls, fluxes, combined, order, blue, outpath):
-    # blue arm stays in the earth frame; red arm is in the stellar frame after round 1
+    # blue arm in Earth frame; red arm in stellar frame after round 1
     frame = 'Earth' if blue else 'Stellar'
     arm = 'blue' if blue else 'red'
 

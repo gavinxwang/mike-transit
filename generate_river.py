@@ -1,5 +1,5 @@
-# Build the 2D residual spectra (rivers) for each feature: divide by the OOT stellar spectrum,
-# remove outliers, subtract the CLV + RM model and mask strong tellurics
+# build 2D residual spectra (river plots) for each feature
+# divides by the OOT stellar spectra, removes outliers, subtracts the CLV + RM model, and masks strong tellurics
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -18,8 +18,8 @@ RIVER_VMIN, RIVER_VMAX = -0.03, 0.03
 
 # TelFit telluric masking: fit H2O/O2 once per order, mask pixels with >10% telluric absorption
 TELLURIC_ORDERS = {41, 42, 44, 45, 47, 48, 49, 50, 54, 55}
-TELLURIC_DEPTH_LIMIT = 0.9  # mask where transmission T < this (>10% absorption)
-TEL_OBS_LAT = -29.01
+TELLURIC_DEPTH_LIMIT = 0.9
+TEL_OBS_LAT = -29.01 # LCO
 TEL_OBS_ALT = 2.38
 TEL_PRESSURE = 755.0
 TEL_RESOLUTION = 65000.0
@@ -27,8 +27,7 @@ TEL_CO2 = 1368.5
 
 
 def feature_window(feature):
-    # full-order features named like 'Order53' display the entire order
-    if feature.startswith('Order'):
+    if feature.startswith('Order'): # full-order "features," e.g. 'Order53'
         return int(feature[len('Order'):]), None, None, None
     order, rest_wl = FEATURE_MAP[feature]
     extent = 15 if feature == 'Halpha' else 10
@@ -40,7 +39,7 @@ def zenith_deg(airmass):
 
 
 def fit_telluric_params(order, nexp, airmass_full):
-    '''Fit H2O and O2 on the median stack at median airmass (once per order).'''
+    '''Fit H2O and O2 on the median spectrum at median airmass (once per order).'''
     from telfit import DataStructures, Modeler, TelluricFitter
 
     params_dir = BASE_DIR / f'{target_string}_tellurics'
@@ -108,7 +107,7 @@ def fit_telluric_params(order, nexp, airmass_full):
 
 
 def telluric_transmission_earth(wl_angstrom, zenith, params):
-    '''Return TelFit transmission on the supplied Earth-frame air wavelength grid (A).'''
+    '''Return TelFit transmission on the input Earth-frame air wavelength grid wl_angstrom.'''
     from telfit import Modeler
 
     wl_nm = np.asarray(wl_angstrom, dtype=float) / 10.0
@@ -138,7 +137,7 @@ def compute_telluric_transmission(wls_earth, order, nexp, exposure_to_full, airm
 
 
 def mask_deep_telluric_pixels(*arrays, telluric_trans, depth_limit=TELLURIC_DEPTH_LIMIT):
-    '''Return copies with NaN wherever telluric absorption exceeds ``1 - depth_limit``.'''
+    '''Mask telluric absorption that exceeds 1 - depth_limit.'''
     deep = np.isfinite(telluric_trans) & (telluric_trans < depth_limit)
     masked = []
     for arr in arrays:
@@ -168,11 +167,11 @@ def remove_outliers(flux, errors):
 
 
 def load_errors(order, blue, nexp, spectra_dir):
-    # pipeline uncertainties and the pipeline wavelengths (from round 0), both in the earth frame
     arm_prefix = 'b' if blue else 'r'
     fs = sorted((BASE_DIR / f'{target_string}_uncertainties_cleaned').glob(f'{arm_prefix}*_o0{order}_unc.npy'))
     if len(fs) != nexp:
         return None, None
+    # pipeline uncertainties and the pipeline wavelengths (from round 0), both in the Earth frame
     errors = np.array([np.load(f)[10:-10] for f in fs])
     errors_wls = np.array([np.load(spectra_dir / f'{target_string}_spec_wlsol_round0_order{order}_exp{j}.npy')[10:-10, 0] for j in range(nexp)])
     return errors, errors_wls
@@ -226,7 +225,7 @@ def main():
         wls = np.array([s[:, 0] for s in specs])
         fluxes = np.array([s[:, 1] for s in specs])
 
-        # blue arm is in the earth frame; red arm is in the stellar frame after the wavelength solution
+        # blue arm wls is in the Earth frame; red arm is in the stellar frame
         if blue:
             wls_earth = np.copy(wls)
             wls_stellar = np.array([doppler(-rvs_arm[j], wls_earth[j]) for j in range(nexp)])
@@ -244,7 +243,7 @@ def main():
             print('  number of error files does not match fluxes, skipping')
             continue
 
-        # interpolate flux and errors to common earth grid
+        # interpolate flux and errors to common Earth grid
         wl_grid = np.nanmedian(wls_earth, axis=0)
         errors_wl_grid = np.nanmedian(errors_wls, axis=0)
         npix = wl_grid.size
@@ -254,12 +253,13 @@ def main():
         for j in range(nexp):
             fluxes_common[j] = interpolate.interp1d(
                 wls_earth[j], fluxes[j], kind='cubic', bounds_error=False, fill_value='extrapolate')(wl_grid)
-            # errors are already in the earth frame, but on the pipeline wavelength grid
+            # errors are already in the Earth frame, but on the pipeline wavelength grid
             errors_common[j] = interpolate.interp1d(
                 errors_wls[j], errors_raw[j], kind='cubic', bounds_error=False, fill_value='extrapolate')(errors_wl_grid)
 
         eval_tellurics = None
         telluric_deep_mask = None
+        # interpolate tellurics onto Earth frame wavelengths and use for masking
         if telluric_native is not None:
             eval_tellurics = np.array([
                 interpolate.interp1d(wls_earth[j], telluric_native[j], kind='linear', bounds_error=False, fill_value=np.nan)(wl_grid)
@@ -275,7 +275,7 @@ def main():
             for j in range(nexp)
         ])
 
-        # OOT baseline: skip first N post-egress (flare tail; see constants.N_SKIP_POST_EGRESS)
+        # OOT baseline
         master_stellar_model = np.nanmedian(dat_stellar[baseline_oot_mask(phases_arm)], axis=0)
 
         plt.figure(figsize=(15, 6))
@@ -288,7 +288,7 @@ def main():
         plt.savefig(stellar_plot_dir / f'order{order}_round{round}.png', facecolor='w', dpi=200)
         plt.close()
 
-        # normalize on common grid: shift master stellar model to earth frame for each exposure
+        # normalize on common grid: shift master stellar model to Earth frame for each exposure
         river_normalized = np.full_like(fluxes_common, np.nan)
         for j in range(nexp):
             wl_earth_model = doppler(rvs_arm[j], wl_grid_stellar)
@@ -297,7 +297,7 @@ def main():
             denom = np.where(np.isfinite(eval_stellar) & (eval_stellar > 0), eval_stellar, np.nan)
             river_normalized[j] = (fluxes_common[j] / denom) - 1.0
 
-        # use errors in the earth frame to remove outliers
+        # use errors in the Earth frame to remove outliers
         cleaned_flux = remove_outliers(river_normalized, errors_common)
 
         X, Y = np.meshgrid(wl_grid, phases_full)
@@ -372,7 +372,7 @@ def main():
         plt.savefig(river_plot_dir / f'{feature}_order{order}_round{round}_flux_errors.png', facecolor='w', dpi=200)
         plt.close()
 
-        # in earth frame; also save the outlier-cleaned data and the clv model
+        # save products including outlier-cleaned data and clv model
         save_kwargs = dict(
             X=X, Y=Y,
             raw=river_normalized,

@@ -1,4 +1,4 @@
-# Rename the OBJECT key in the raw FITS files so each spectrum is unique
+# rename OBJECT key in raw FITS files so each spectrum is unique
 
 import re
 
@@ -7,7 +7,7 @@ from astropy.io import fits
 
 from constants import BASE_DIR, RAW_FOLDER, RED_OBJECT_OFFSET, TARGET
 
-exclude = ['WASP-52', 'LTT9779', 'test_Flat', 'placeholder']  # exclude other targets in same folder
+exclude = ['test_Flat', 'placeholder']  # exclude other targets in same folder
 
 
 def atof(text):
@@ -22,11 +22,9 @@ def natural_keys(text):
 
 
 def main():
-    # renamed files go in a folder named after the target
     outdir = BASE_DIR / TARGET
     outdir.mkdir()
 
-    # red, then blue arm data
     for arm in ['r', 'b']:
         fs = sorted((str(p) for p in (BASE_DIR / RAW_FOLDER).glob(f'{arm}*.fits')), key=natural_keys)
         print(f'Found {len(fs)} files:')

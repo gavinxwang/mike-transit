@@ -1,4 +1,4 @@
-# Compute the orbital phase, airmass and stellar RV of each exposure from the raw FITS headers
+# compute orbital phase, airmass, and stellar RV of each exposure from raw FITS headers
 
 import math
 
@@ -15,26 +15,27 @@ from constants import (
 )
 from planet import make_planet
 
-# use the arm with no missing exposures
+# use arm with no missing exposures
 arm = 'b' if MISSING_SLOT_BLUE is None else 'r'
 
 
-def compute_rvs(exoplanet, hjds):
+def compute_rvs(exoplanet, jds, bjds):
     # observer-frame stellar RVs in m/s
-    rvs = np.zeros(len(hjds))
-    for i, hjd in enumerate(hjds):
-        corr, bjd = pyasl.helcorr(LCO_LON, LCO_LAT, LCO_ALT, exoplanet.radeg, exoplanet.decdeg, hjd)
+    # barycentric correction uses UTC JD; reflex uses BJD_TDB
+    rvs = np.zeros(len(jds))
+    for i, (jd, bjd) in enumerate(zip(jds, bjds)):
+        corr, _ = pyasl.helcorr(LCO_LON, LCO_LAT, LCO_ALT, exoplanet.radeg, exoplanet.decdeg, jd)
         if exoplanet.geom == 'eclipse':
-            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 + hjd) / exoplanet.P)
+            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 + bjd) / exoplanet.P)
         elif exoplanet.geom == 'transit':
-            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 - hjd) / exoplanet.P)
+            reflex = exoplanet.K * math.sin(2 * math.pi * (exoplanet.t0 - bjd) / exoplanet.P)
         rvs[i] = exoplanet.sysrv + reflex - corr * 1000
     return rvs
 
 
 def main():
     bjds = []
-    hjds = []
+    jds = []
     airmass = []
     for f in sorted((BASE_DIR / RAW_FOLDER).glob(f'{arm}*.fits')):
         header = fits.getheader(f)
@@ -52,10 +53,7 @@ def main():
         target_coord = SkyCoord(header['RA'], header['DEC'], unit=(u.hourangle, u.deg))
         ltt_bary = mid_time.light_travel_time(target_coord, location=lco)
         bjds.append((mid_time.tdb + ltt_bary).jd)
-
-        # mid-exposure time used for the RVs
-        t = Time(header['DATE-OBS'], format='isot', scale='utc')
-        hjds.append(t.jd + 0.5 * header['EXPTIME'] / (24 * 60 * 60))
+        jds.append(mid_time.jd)
         airmass.append(header['AIRMASS'])
 
     bjds = np.array(bjds)
@@ -65,7 +63,7 @@ def main():
     phases = (bjds - (MID_TRANSIT + 2450000.0)) / P_DAYS
     np.savetxt(PHASES_FILE, phases)
     np.savetxt(AIRMASS_FILE, airmass)
-    np.save(RVS_FILE, compute_rvs(make_planet(), np.array(hjds)))
+    np.save(RVS_FILE, compute_rvs(make_planet(), np.array(jds), bjds))
     print(f'Wrote {PHASES_FILE}, {AIRMASS_FILE} and {RVS_FILE}')
 
 

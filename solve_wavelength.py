@@ -1,4 +1,4 @@
-# Run the wavelength solution for each order (round 1: stellar model, round 2: combined stellar spectrum)
+# run the wavelength solver for each order (round 1: stellar model, round 2: combined stellar spectrum)
 
 import mike_wavelength_solver
 from constants import (
@@ -25,15 +25,15 @@ def main():
         sky_fac = 0 if blue else 1
 
         if roundno == 2:
-            phoenix_fn = None
+            stellar_model_fn = None
             skyspec_fn = None
         else:
-            phoenix_fn = STELLAR_MODEL_FILE
+            stellar_model_fn = STELLAR_MODEL_FILE
             skyspec_fn = SKY_FILE or BASE_DIR / f'{target_string}_tellurics' / f'telluric_model_order{order}.txt'
 
         mike_wavelength_solver.main(
             exoplanet=planet, order=order, sky_fac=sky_fac, resolution=resolution,
-            specdir=specdir, newdir=newdir, phoenix_fn=phoenix_fn, skyspec_fn=skyspec_fn,
+            specdir=specdir, newdir=newdir, stellar_model_fn=stellar_model_fn, skyspec_fn=skyspec_fn,
             modloc=newdir, modbase=f'{target_string}_stellar_spec_transit_order{{0}}.npy', roundno=roundno,
         )
 

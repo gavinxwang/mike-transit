@@ -1,4 +1,4 @@
-# Fit a TelFit telluric model to each red order, used as the sky model in round 1 of the wavelength solution
+# fit a TelFit telluric model to each red order, used as the sky model in round 1 of the wavelength solution
 
 import matplotlib.pyplot as plt
 import numpy as np

@@ -1,4 +1,4 @@
-# Write the flux, uncertainty and pipeline wavelength solution of each order from the MIKE pipeline products
+# write flux, uncertainty, and pipeline wavelength solution for each order from the MIKE pipeline products
 
 import re
 
@@ -12,7 +12,7 @@ from constants import (
     BASE_DIR, PIPELINE_FOLDER, SPECTRA_FOLDER_BLUE, SPECTRA_FOLDER_RED, TARGET, target_string,
 )
 
-# continuum normalization of the round-0 spectra
+# normalize round 0 spectra continuum
 cheb_deg = 5
 depth_lim = 0.05
 max_iter = 40
@@ -48,13 +48,12 @@ def pipeline_wavelengths(header, npix):
         row_idx = int(match.group(1)) - 1
         body = match.group(2)
 
-        # A regex fix in case wstart and delta strings lose their separating space (e.g., 3418.230.017)
-        # 1. Unified fix for the first three tokens (order, 1, 0)
-        # This fixes "851 0", "85 10", "8510", and normalizes "85 1 0"
+        # regex fix since some separating spaces are missing
+        # 1. fix for first three entries (order, 1, 0)
         body = re.sub(r'^\s*(\d{2,3})\s*1\s*0\b', r'\1 1 0 ', body)
-        # 2. Fix '0' merged with wstart (e.g., "1 03786.7" -> "1 0 3786.7")
+        # 2. fix '0' merged with wstart (e.g., "1 03786.7" -> "1 0 3786.7")
         body = re.sub(r'\b1\s*0\s*(\d{4}\.\d+)', r'1 0 \1', body)
-        # 3. Fix wstart merged with delta (e.g., "3418.230.017" -> "3418.23 0.017")
+        # 3. fix wstart merged with delta (e.g., "3418.230.017" -> "3418.23 0.017")
         body = re.sub(r'(\.\d+)(0\.\d+)', r'\1 \2', body)
 
         tokens = body.split()
@@ -107,7 +106,7 @@ def main():
         spectra_dir = BASE_DIR / (SPECTRA_FOLDER_BLUE if arm == 'blue' else SPECTRA_FOLDER_RED)
         spectra_dir.mkdir(parents=True, exist_ok=True)
 
-        # only the target's exposures (other stars observed the same night can be in the same folder)
+        # only the target's exposures (other stars observed in same night can be in the same folder)
         fs = sorted((str(p) for p in products.glob(f'{TARGET.lower()}-*{arm}_multi.fits')), key=natural_keys)
         print(f'{arm} arm: found {len(fs)} exposures')
 

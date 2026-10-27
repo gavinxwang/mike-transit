@@ -5,13 +5,13 @@ font.family         : sans-serif
 font.sans-serif     : Arial
 
 # Set font sizes
-font.size           : 18 #6
-axes.titlesize      : 20 #6
-axes.labelsize      : 20 #6
-xtick.labelsize     : 20 #6
-ytick.labelsize     : 20 #6
-legend.fontsize     : 16 #4
-figure.titlesize    : 16 #6
+font.size           : 18
+axes.titlesize      : 20
+axes.labelsize      : 20
+xtick.labelsize     : 20
+ytick.labelsize     : 20
+legend.fontsize     : 16
+figure.titlesize    : 16
 
 # Set tick parameters
 xtick.direction     : in

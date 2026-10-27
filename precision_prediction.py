@@ -1,19 +1,19 @@
-# Predict the 1-sigma precision on line absorption depth achievable with MIKE
+# predict the 1-sigma precision on line absorption depth achievable with MIKE
 #   sigma_A(%) = C * 10^(0.2*(V-11)) * (sigma_v / 5.5 km/s)^p * sqrt(1/tau_in + 1/tau_out) / sqrt(N_tr)
 
 import numpy as np
 
 name    = 'WASP-33 b'
 V       = 8.14  # host star V magnitude
-tau_in  = 2.85  # in-transit time, hours
+tau_in  = 2.85  # transit duration, hours
 tau_out = 2.0   # out-of-transit baseline, hours
 N_tr    = 1     # number of transits
-fwhm    = 30.5  # expected line FWHM, km/s
+fwhm    = 30.5  # line FWHM, km/s
 
-# coefficients calibrated on WASP-55 b and WASP-107 b, % * hr^(1/2), at sigma_v = 5.5 km/s
 SIGMA_REF = 5.5  # km/s
-P_WIDTH = -1.0 / 3.0  # sigma_A ∝ sigma_v^p
+P_WIDTH = -0.331  # sigma_A ∝ sigma_v^p, measured via injection-recovery
 
+# coefficients calibrated on WASP-55 b and WASP-107 b
 COEFFS = {
     'H alpha':       0.619,
     'H beta':        0.659,

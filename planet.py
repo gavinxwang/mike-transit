@@ -1,11 +1,11 @@
-# Planetary system parameters used by the wavelength solution
+# planetary system parameters used by the wavelength solution
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 from constants import K_STAR, P_DAYS, RA_DEC, SYS_RV, T0, target_string
 
-
+# note not the exoplanet package!
 class exoplanet:
     'exoplanet class, with important parameters'
     def __init__(self, name):

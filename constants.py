@@ -1,4 +1,4 @@
-# Target settings, folder names and shared exposure-geometry helpers
+# target settings, folder names, and exposure geometry helpers
 
 import os
 from pathlib import Path
@@ -8,7 +8,7 @@ import numpy as np
 # run every script from the data directory
 BASE_DIR = Path.cwd()
 
-# allow `TARGET=WASP-55 python script.py` without editing this file
+# allow e.g. `TARGET=WASP-55 python script.py` without editing this file
 TARGET = os.environ.get('TARGET', 'WASP-107')
 
 PIPELINE_FOLDER = 'run_carpy'
@@ -16,7 +16,7 @@ PIPELINE_FOLDER = 'run_carpy'
 use_ray = True
 NUM_CPUS = 8
 
-# Magellan / Las Campanas
+# LCO
 LCO_LAT, LCO_LON, LCO_ALT = -29.01416667, -70.6925, 2282.0
 
 FEATURES = [
@@ -76,7 +76,7 @@ if TARGET == 'WASP-107':
     PHASES_FILE = BASE_DIR / 'wasp107_mike_phases.txt'
 
     # stellar model for round 1 of the wavelength solution
-    STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'lte043-0.0-0.0a+0.0.BT-Settl.7'
+    STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'bt-settl_4400_4.5.txt'
     # sky model for round 1; None uses the TelFit models from get_tellurics.py
     SKY_FILE = None
 
@@ -86,7 +86,6 @@ if TARGET == 'WASP-107':
     # missing exposure per arm
     MISSING_SLOT_RED = 3
     MISSING_SLOT_BLUE = None
-
 
     # offset added to red-arm object numbers so they match the blue arm
     RED_OBJECT_OFFSET = 0
@@ -116,7 +115,7 @@ elif TARGET == 'WASP-55':
 
     PHASES_FILE = BASE_DIR / 'wasp55_mike_phases.txt'
 
-    STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'lte060-4.5-0.0a+0.0.BT-NextGen.7'
+    STELLAR_MODEL_FILE = BASE_DIR / 'wavesol' / 'bt-settl_6000_4.5.txt'
     SKY_FILE = BASE_DIR / 'wavesol' / 'flat_sky_angstrom.txt'
 
     CLV_PACK = 'W55-pack'
@@ -145,8 +144,8 @@ AIRMASS_FILE = BASE_DIR / f'{target_string}_airmass.txt'
 START_TRANSIT_PHASE = (START_TRANSIT - MID_TRANSIT) / P_DAYS
 END_TRANSIT_PHASE = (END_TRANSIT - MID_TRANSIT) / P_DAYS
 
-# post-egress frames excluded from F_OOT when building rivers (flare tail)
-N_SKIP_POST_EGRESS = 2
+# post-egress frames excluded from F_OOT (2 for WASP-107 flare tail, usually just 0)
+N_SKIP_POST_EGRESS = 0
 
 
 def get_geometry(order, n_full):
@@ -172,7 +171,7 @@ def rvs_for_arm(rvs_full, exposure_to_full):
 
 
 def in_transit_mask(phases_arm):
-    '''True for exposures inside transit (orbital phase vs contact phases).'''
+    '''True for in-transit exposures.'''
     return (phases_arm >= START_TRANSIT_PHASE) & (phases_arm <= END_TRANSIT_PHASE)
 
 
@@ -182,13 +181,7 @@ def oot_mask(phases_arm):
 
 
 def baseline_oot_mask(phases_arm, n_skip_post=N_SKIP_POST_EGRESS):
-    '''
-    OOT exposures for river normalization / transmission baseline.
-
-    All OOT frames except the first ``n_skip_post`` post-egress exposures
-    (still in-transit for normalization: they divide by F_OOT but do not
-    enter the median that defines F_OOT).
-    '''
+    '''OOT exposures for river normalization / transmission baseline.'''
     phases_arm = np.asarray(phases_arm)
     mask = oot_mask(phases_arm)
     post_ix = np.where(phases_arm > END_TRANSIT_PHASE)[0]
