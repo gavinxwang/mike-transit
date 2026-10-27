@@ -44,6 +44,6 @@ To estimate the precision achievable with MIKE for any planet, input the system 
 
 ## Acknowledgments
 
-If you use this code, please cite [Wang et al. (2026)] and provide a link to this repository.
+If you use this code, please cite Wang et al. (2026) and this repository via its Zenodo DOI.
 
 Feel free to reach out with any questions.
